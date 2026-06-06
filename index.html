@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0060)file:///C:/Users/User/Downloads/warehouse_tool_v2%20(4).html -->
+<!-- saved from url=(0060)file:///C:/Users/User/Downloads/warehouse_tool_v2%20(2).html -->
 <html lang="en" dir="ltr"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -61,87 +61,71 @@
 </style>
 </head>
 <body>
-<!-- Password Screen -->
-<div id="passwordScreen" style="display:flex;align-items:center;justify-content:center;min-height:100vh;margin:-30px -20px;">
-  <div style="background:#1a2535;border:1px solid #2d3f55;border-radius:20px;padding:40px;text-align:center;max-width:400px;width:90%">
-    <div style="font-size:3rem;margin-bottom:16px">🔐</div>
-    <h2 style="color:#fff;font-size:1.4rem;font-weight:700;margin-bottom:8px">Warehouse Receipts Tool</h2>
-    <p style="color:#7a8a99;font-size:0.9rem;margin-bottom:24px">Enter password to continue</p>
-    <input id="pwdInput" type="password" placeholder="Password" style="width:100%;padding:12px 16px;border-radius:10px;border:1px solid #2d3f55;background:#0f1923;color:#fff;font-size:1rem;margin-bottom:12px;outline:none;font-family:&#39;Inter&#39;,sans-serif" onkeydown="if(event.key===&#39;Enter&#39;) checkPassword()">
-    <div id="pwdError" style="color:#ff6666;font-size:0.85rem;margin-bottom:12px;display:none">❌ Wrong password, try again</div>
-    <button onclick="checkPassword()" style="width:100%;padding:13px;border-radius:10px;border:none;background:linear-gradient(135deg,#00d4aa,#0099ff);color:#fff;font-size:1rem;font-weight:700;cursor:pointer;font-family:&#39;Inter&#39;,sans-serif">
-      Enter
-    </button>
-  </div>
-</div>
-
-<!-- Main App (hidden until password correct) -->
-<div id="mainApp" style="display:none">
 <div class="header">
   <h1>Warehouse <span>Receipts</span> Tool</h1>
   <p>Upload the Transfer sheet and Location sheet — get the final output instantly</p>
 </div>
 
 <div class="upload-grid">
-  <div class="upload-box" id="box1">
+  <div class="upload-box loaded" id="box1">
     <input type="file" id="file1" accept=".xlsx,.xls">
     <div class="upload-icon">📥</div>
     <h3>Transfer Sheet</h3>
     <p>Stock Picking / Receipts</p>
-    <div class="status" id="status1"></div>
+    <div class="status" id="status1">✓ استلامات فروزن 6-6.xlsx</div>
   </div>
-  <div class="upload-box" id="box2">
+  <div class="upload-box loaded" id="box2">
     <input type="file" id="file2" accept=".xlsx,.xls,.csv">
     <div class="upload-icon">📦</div>
     <h3>Location Sheet</h3>
     <p>ID / Location / Quantity</p>
-    <div class="status" id="status2"></div>
+    <div class="status" id="status2">✓ تسكين فروزن 6-6.xlsx</div>
   </div>
 </div>
 
-<button class="btn-convert" id="btnConvert" disabled="" onclick="processFiles()">⚡ Generate Output</button>
+<button class="btn-convert" id="btnConvert" onclick="processFiles()">⚡ Generate Output</button>
 <div class="error-box" id="errorBox"></div>
 
-<div class="result-section" id="resultSection">
+<div class="result-section show" id="resultSection">
 
   <div class="result-box">
     <h3>✅ File Ready!</h3>
-    <p id="resultDesc"></p>
+    <p id="resultDesc">101 products from Transfer → 102 rows in output</p>
     <div class="stats">
-      <div class="stat"><div class="num" id="sTotal">0</div><div class="label">Total Rows</div></div>
-      <div class="stat"><div class="num" id="sOk">0</div><div class="label">✅ Matched</div></div>
+      <div class="stat"><div class="num" id="sTotal">102</div><div class="label">Total Rows</div></div>
+      <div class="stat"><div class="num" id="sOk">100</div><div class="label">✅ Matched</div></div>
       <div class="stat"><div class="num" id="sAdj">0</div><div class="label">⚠️ Adjusted</div></div>
-      <div class="stat"><div class="num" id="sFix">0</div><div class="label">🔧 Location Fixed</div></div>
-      <div class="stat"><div class="num" id="sMiss">0</div><div class="label">❌ No Location</div></div>
+      <div class="stat"><div class="num" id="sFix">77</div><div class="label">🔧 Location Fixed</div></div>
+      <div class="stat"><div class="num" id="sMiss">1</div><div class="label">❌ No Location</div></div>
     </div>
     <button class="btn-download" onclick="downloadResult()">⬇️ Download Output</button>
     <button class="btn-download" style="background:#0099ff;margin-top:10px" onclick="downloadReport()">📊 Download Report</button>
   </div>
 
   <!-- Missing in location sheet -->
-  <div class="report-card red" id="cardMissing">
+  <div class="report-card red show" id="cardMissing">
     <h4>❌ In Transfer — NOT in Location Sheet</h4>
     <table class="report-table">
       <thead><tr><th>Product ID</th><th>Product Name</th><th>Qty</th><th>Status</th></tr></thead>
-      <tbody id="bodyMissing"></tbody>
+      <tbody id="bodyMissing"><tr><td>57349124</td><td style="color:#aaa;font-size:.8rem">InstaChef Macaroni Bechamel Chef's Bolognese Sauce (500g)</td><td>162</td><td><span class="badge badge-miss">No Location</span></td></tr></tbody>
     </table>
   </div>
 
   <!-- Extra in location sheet -->
-  <div class="report-card blue" id="cardExtra">
+  <div class="report-card blue show" id="cardExtra">
     <h4>🔵 In Location Sheet — NOT in Transfer</h4>
     <table class="report-table">
       <thead><tr><th>Product ID</th><th>Product Name</th><th>Location</th><th>Status</th></tr></thead>
-      <tbody id="bodyExtra"></tbody>
+      <tbody id="bodyExtra"><tr><td>35815996</td><td style="color:#aaa;font-size:.8rem">Instachef Stir-Fried Asian Noodles with Vegetables (500g)</td><td style="font-size:.78rem;color:#88aacc">KAT/Stock/Zone (FZ1)/Line 03/FZ1-03-D07</td><td><span class="badge badge-extra">Not in Transfer</span></td></tr></tbody>
     </table>
   </div>
 
   <!-- Location fixes -->
-  <div class="report-card green" id="cardFixed">
+  <div class="report-card green show" id="cardFixed">
     <h4>🔧 Auto-Fixed Locations (KAT prefix)</h4>
     <table class="report-table">
       <thead><tr><th>Product ID</th><th>Original</th><th>Fixed To</th></tr></thead>
-      <tbody id="bodyFixed"></tbody>
+      <tbody id="bodyFixed"><tr><td>10623684</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 03/FZ1-03-A07</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 03/FZ1-03-A07</td></tr><tr><td>10623890</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 03/FZ1-03-D06</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 03/FZ1-03-D06</td></tr><tr><td>57348406</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 03/FZ1-03-C07</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 03/FZ1-03-C07</td></tr><tr><td>10623681</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 03/FZ1-03-C07</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 03/FZ1-03-C07</td></tr><tr><td>10623682</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 03/FZ1-03-C07</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 03/FZ1-03-C07</td></tr><tr><td>35815996</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 03/FZ1-03-D07</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 03/FZ1-03-D07</td></tr><tr><td>1989942</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 01/FZ1-01-A07</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 01/FZ1-01-A07</td></tr><tr><td>1989942</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 01/FZ1-01-A07</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 01/FZ1-01-A07</td></tr><tr><td>31484908</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 01/FZ1-01-C06</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 01/FZ1-01-C06</td></tr><tr><td>17476323</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 01/FZ1-01-A03</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 01/FZ1-01-A03</td></tr><tr><td>17476323</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 01/FZ1-01-C09</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 01/FZ1-01-C09</td></tr><tr><td>31484904</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 01/FZ1-01-A02</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 01/FZ1-01-A02</td></tr><tr><td>5856490</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 01/FZ1-01-B02</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 01/FZ1-01-B02</td></tr><tr><td>1990477</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 01/FZ1-01-C04</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 01/FZ1-01-C04</td></tr><tr><td>1907916</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ2)/Line 04/FZ2-04-A05</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ2)/Line 04/FZ2-04-A05</td></tr><tr><td>678891</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ2)/Line 04/FZ2-04-G07</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ2)/Line 04/FZ2-04-G07</td></tr><tr><td>1907862</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ2)/Line 04/FZ2-04-A04</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ2)/Line 04/FZ2-04-A04</td></tr><tr><td>2048594</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ2)/Line 03/FZ2-03-B04</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ2)/Line 03/FZ2-03-B04</td></tr><tr><td>662817</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ2)/Line 03/FZ2-03-B04</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ2)/Line 03/FZ2-03-B04</td></tr><tr><td>40156112</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ2)/Line 03/FZ2-03-A03</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ2)/Line 03/FZ2-03-A03</td></tr><tr><td>663064</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ2)/Line 03/FZ2-03-A03</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ2)/Line 03/FZ2-03-A03</td></tr><tr><td>2058291</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ2)/Line 03/FZ2-03-B03</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ2)/Line 03/FZ2-03-B03</td></tr><tr><td>2058045</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ2)/Line 03/FZ2-03-C02</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ2)/Line 03/FZ2-03-C02</td></tr><tr><td>40156119</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ2)/Line 03/FZ2-03-C02</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ2)/Line 03/FZ2-03-C02</td></tr><tr><td>40156113</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ2)/Line 03/FZ2-03-A02</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ2)/Line 03/FZ2-03-A02</td></tr><tr><td>40156110</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ2)/Line 03/FZ2-03-A05</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ2)/Line 03/FZ2-03-A05</td></tr><tr><td>678891</td><td style="color:#f88;font-size:.8rem">aT/Stock/Zone (FZ2)/Line 04/FZ2-04-F05</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ2)/Line 04/FZ2-04-F05</td></tr><tr><td>25433162</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ2)/Line 02/FZ2-02-A07</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ2)/Line 02/FZ2-02-A07</td></tr><tr><td>25433158</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ2)/Line 02/FZ2-02-A06</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ2)/Line 02/FZ2-02-A06</td></tr><tr><td>9827284</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ2)/Line 02/FZ2-02-B06</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ2)/Line 02/FZ2-02-B06</td></tr><tr><td>9827284</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ2)/Line 02/FZ2-02-B04</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ2)/Line 02/FZ2-02-B04</td></tr><tr><td>1907862</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ2)/Line 04/FZ2-04-E03</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ2)/Line 04/FZ2-04-E03</td></tr><tr><td>1907862</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ2)/Line 04/FZ2-04-E04</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ2)/Line 04/FZ2-04-E04</td></tr><tr><td>1907862</td><td style="color:#f88;font-size:.8rem">aT/Stock/Zone (FZ2)/Line 04/FZ2-04-G02</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ2)/Line 04/FZ2-04-G02</td></tr><tr><td>1907862</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ2)/Line 04/FZ2-04-E07</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ2)/Line 04/FZ2-04-E07</td></tr><tr><td>1907862</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ2)/Line 04/FZ2-04-D07</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ2)/Line 04/FZ2-04-D07</td></tr><tr><td>1907862</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ2)/Line 04/FZ2-04-C08</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ2)/Line 04/FZ2-04-C08</td></tr><tr><td>686381</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ2)/Line 04/FZ2-04-B08</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ2)/Line 04/FZ2-04-B08</td></tr><tr><td>686381</td><td style="color:#f88;font-size:.8rem">aT/Stock/Zone (FZ2)/Line 04/FZ2-04-A06</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ2)/Line 04/FZ2-04-A06</td></tr><tr><td>1907862</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ2)/Line 04/FZ2-04-B05</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ2)/Line 04/FZ2-04-B05</td></tr><tr><td>44737934</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 03/FZ1-03-G06</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 03/FZ1-03-G06</td></tr><tr><td>17832465</td><td style="color:#f88;font-size:.8rem">aT/Stock/Zone (FZ1)/Line 03/FZ1-03-D05</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 03/FZ1-03-D05</td></tr><tr><td>3297854</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 03/FZ1-03-B07</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 03/FZ1-03-B07</td></tr><tr><td>10099095</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 03/FZ1-03-D03</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 03/FZ1-03-D03</td></tr><tr><td>10099097</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 03/FZ1-03-D03</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 03/FZ1-03-D03</td></tr><tr><td>1192893</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 03/FZ1-03-G01</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 03/FZ1-03-G01</td></tr><tr><td>34852652</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 03/FZ1-03-C01</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 03/FZ1-03-C01</td></tr><tr><td>30778870</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 03/FZ1-03-B09</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 03/FZ1-03-B09</td></tr><tr><td>49345594</td><td style="color:#f88;font-size:.8rem">aT/Stock/Zone (FZ1)/Line 04/FZ1-04-F02</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 04/FZ1-04-F02</td></tr><tr><td>48519346</td><td style="color:#f88;font-size:.8rem">aT/Stock/Zone (FZ1)/Line 04/FZ1-04-F02</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 04/FZ1-04-F02</td></tr><tr><td>48519348</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 04/FZ1-04-C03</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 04/FZ1-04-C03</td></tr><tr><td>39353472</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 03/FZ1-03-D02</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 03/FZ1-03-D02</td></tr><tr><td>48519349</td><td style="color:#f88;font-size:.8rem">T/Stock/Zone (FZ1)/Line 04/FZ1-04-G04</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 04/FZ1-04-G04</td></tr><tr><td>41791839</td><td style="color:#f88;font-size:.8rem">T/Stock/Zone (FZ1)/Line 04/FZ1-04-G04</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 04/FZ1-04-G04</td></tr><tr><td>48519344</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 04/FZ1-04-D04</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 04/FZ1-04-D04</td></tr><tr><td>32500181</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 03/FZ1-03-A09</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 03/FZ1-03-A09</td></tr><tr><td>44737934</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 03/FZ1-03-A09</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 03/FZ1-03-A09</td></tr><tr><td>41792179</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 04/FZ1-04-G03</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 04/FZ1-04-G03</td></tr><tr><td>30778870</td><td style="color:#f88;font-size:.8rem">aT/Stock/Zone (FZ1)/Line 03/FZ1-03-D08</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 03/FZ1-03-D08</td></tr><tr><td>52751508</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 03/FZ1-03-G09</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 03/FZ1-03-G09</td></tr><tr><td>40471404</td><td style="color:#f88;font-size:.8rem">aT/Stock/Zone (FZ1)/Line 03/FZ1-03-D09</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 03/FZ1-03-D09</td></tr><tr><td>21771123</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 04/FZ1-04-B05</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 04/FZ1-04-B05</td></tr><tr><td>48519343</td><td style="color:#f88;font-size:.8rem">aT/Stock/Zone (FZ1)/Line 04/FZ1-04-E06</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 04/FZ1-04-E06</td></tr><tr><td>21782184</td><td style="color:#f88;font-size:.8rem">aT/Stock/Zone (FZ1)/Line 04/FZ1-04-E06</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 04/FZ1-04-E06</td></tr><tr><td>48519342</td><td style="color:#f88;font-size:.8rem">aT/Stock/Zone (FZ1)/Line 04/FZ1-04-E06</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 04/FZ1-04-E06</td></tr><tr><td>44790480</td><td style="color:#f88;font-size:.8rem">aT/Stock/Zone (FZ1)/Line 04/FZ1-04-C07</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 04/FZ1-04-C07</td></tr><tr><td>21770694</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 04/FZ1-04-B08</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 04/FZ1-04-B08</td></tr><tr><td>21781255</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 04/FZ1-04-B08</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 04/FZ1-04-B08</td></tr><tr><td>21770695</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 04/FZ1-04-E08</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 04/FZ1-04-E08</td></tr><tr><td>23330722</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 04/FZ1-04-B01</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 04/FZ1-04-B01</td></tr><tr><td>41231241</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 04/FZ1-04-B02</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 04/FZ1-04-B02</td></tr><tr><td>35867761</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 04/FZ1-04-A04</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 04/FZ1-04-A04</td></tr><tr><td>41231323</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 04/FZ1-04-A05</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 04/FZ1-04-A05</td></tr><tr><td>23330726</td><td style="color:#f88;font-size:.8rem">T/Stock/Zone (FZ1)/Line 04/FZ1-04-C08</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 04/FZ1-04-C08</td></tr><tr><td>23330724</td><td style="color:#f88;font-size:.8rem">T/Stock/Zone (FZ1)/Line 04/FZ1-04-C08</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 04/FZ1-04-C08</td></tr><tr><td>32560680</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 04/FZ1-04-E07</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 04/FZ1-04-E07</td></tr><tr><td>1990355</td><td style="color:#f88;font-size:.8rem">AT/Stock/Zone (FZ1)/Line 01/FZ1-01-B03</td><td style="color:#00d4aa;font-size:.8rem">KAT/Stock/Zone (FZ1)/Line 01/FZ1-01-B03</td></tr></tbody>
     </table>
   </div>
 
@@ -150,7 +134,7 @@
     <h4>⚠️ Quantity Adjustments</h4>
     <table class="report-table">
       <thead><tr><th>Product ID</th><th>Location Qty</th><th>Transfer Qty</th><th>Status</th></tr></thead>
-      <tbody id="bodyAdj"></tbody>
+      <tbody id="bodyAdj"><tr><td>249864</td><td>936</td><td><strong>288</strong></td><td><span class="badge badge-warn">Adjusted</span></td></tr></tbody>
     </table>
   </div>
 
@@ -223,23 +207,6 @@ function buildLocGroups(locs, lotQtys) {
     result.push(subset.map(i => locs[i]));
   }
   return result;
-}
-
-// ══════════════════════════════
-// PASSWORD — change this to update
-const CORRECT_PASSWORD = '2282';
-// ══════════════════════════════
-
-function checkPassword() {
-  const input = document.getElementById('pwdInput').value;
-  if (input === CORRECT_PASSWORD) {
-    document.getElementById('passwordScreen').style.display = 'none';
-    document.getElementById('mainApp').style.display = 'block';
-  } else {
-    document.getElementById('pwdError').style.display = 'block';
-    document.getElementById('pwdInput').value = '';
-    document.getElementById('pwdInput').focus();
-  }
 }
 
 function processFiles() {
@@ -587,7 +554,6 @@ function downloadReport() {
   XLSX.writeFile(wb, `report_${ds}.xlsx`);
 }
 </script>
-</div><!-- end mainApp -->
 
 
 </body></html>
