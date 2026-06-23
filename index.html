@@ -206,7 +206,9 @@ function checkReady() { document.getElementById('btnConvert').disabled = !(data1
 
 function fixLoc(loc) {
   if (!loc) return loc;
-  if (loc.toUpperCase().startsWith('KAT/')) return loc;
+  const up = loc.toUpperCase();
+  if (up.startsWith('KAT/')) return 'KAT/' + loc.slice(4);
+  if (up.startsWith('KT/')) return 'KAT/' + loc.slice(3);
   if (/^[aA][tT]\//.test(loc)) return 'KAT/' + loc.slice(3);
   if (/^[tT]\//.test(loc)) return 'KAT/' + loc.slice(2);
   return loc;
