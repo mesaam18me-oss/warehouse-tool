@@ -97,7 +97,6 @@
   ⚠️ سيتم تسجيل خروجك بعد دقيقة واحدة بسبب عدم النشاط
   <button onclick="document.getElementById('timeoutWarning').style.display='none';document.dispatchEvent(new Event('mousemove'))" style="background:rgba(255,255,255,0.3);border:none;color:#fff;padding:4px 12px;border-radius:6px;cursor:pointer;font-weight:700;">تجاهل</button>
 </div>
-
 <!-- Password Screen -->
 <!-- Main App (hidden until password correct) -->
 <div id="mainApp">
@@ -250,12 +249,6 @@ function buildLocGroups(locs, lotQtys) {
     result.push(subset.map(i => locs[i]));
   }
   return result;
-}
-
-// ══════════════════════════════
-// PASSWORD — change this to update
-// ══════════════════════════════
-
 }
 
 function processFiles() {
