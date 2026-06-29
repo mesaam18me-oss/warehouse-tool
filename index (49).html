@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<!-- saved from url=(0060)file:///C:/Users/User/Downloads/warehouse_tool_v2%20(4).html -->
+<html lang="en" dir="ltr"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Warehouse Putaway Tool</title>
+  <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyB_Z5mz_piSipTtivV0ChIJxzuDd7C0OJw",
+    authDomain: "warehouse-tool-559c0.firebaseapp.com",
+    projectId: "warehouse-tool-559c0",
+    storageBucket: "warehouse-tool-559c0.firebasestorage.app",
+    messagingSenderId: "522041647199",
+    appId: "1:522041647199:web:cf02ca42d76b8821887bea"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  onAuthStateChanged(auth, (user) => {
+    if (!user) window.location.href = "login.html";
+  });
+  const TIMEOUT_MS = 5 * 60 * 1000;
+  let logoutTimer, warningTimer;
+  function resetAll() {
+    const warn = document.getElementById('timeoutWarning');
+    if (warn) warn.style.display = 'none';
+    clearTimeout(logoutTimer); clearTimeout(warningTimer);
+    warningTimer = setTimeout(() => { const w = document.getElementById('timeoutWarning'); if (w) w.style.display = 'flex'; }, 4 * 60 * 1000);
+    logoutTimer = setTimeout(async () => { await signOut(auth); window.location.href = "login.html"; }, TIMEOUT_MS);
+  }
+  ['mousemove','keydown','click','scroll','touchstart'].forEach(evt => document.addEventListener(evt, resetAll, true));
+  window.addEventListener('DOMContentLoaded', resetAll);
+  window.doLogout = async function() { await signOut(auth); window.location.href = "login.html"; };
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: #0f1923; color: #e8edf2; min-height: 100vh; padding: 30px 20px; }
+  .header { text-align: center; margin-bottom: 40px; }
+  .header h1 { font-size: 2rem; font-weight: 900; color: #fff; letter-spacing: -1px; }
+  .header h1 span { color: #00d4aa; }
+  .header p { color: #7a8a99; margin-top: 8px; font-size: 0.95rem; }
+  .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 800px; margin: 0 auto 30px; }
+  @media (max-width:600px) { .upload-grid { grid-template-columns: 1fr; } }
+  .upload-box { background: #1a2535; border: 2px dashed #2d3f55; border-radius: 16px; padding: 30px 20px; text-align: center; cursor: pointer; transition: all 0.3s; position: relative; }
+  .upload-box:hover { border-color: #00d4aa; background: #1e2f45; }
+  .upload-box.loaded { border-color: #00d4aa; border-style: solid; background: #162a22; }
+  .upload-box input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .upload-icon { font-size: 2.5rem; margin-bottom: 12px; }
+  .upload-box h3 { font-size: 1rem; font-weight: 700; color: #c8d8e8; margin-bottom: 6px; }
+  .upload-box p { font-size: 0.8rem; color: #5a7a99; }
+  .upload-box .status { margin-top: 12px; font-size: 0.82rem; font-weight: 600; color: #00d4aa; min-height: 20px; word-break: break-all; }
+  .btn-convert { display: block; margin: 0 auto; background: linear-gradient(135deg, #00d4aa, #0099ff); color: #fff; border: none; border-radius: 12px; padding: 16px 50px; font-family: 'Inter', sans-serif; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 20px rgba(0,212,170,0.3); }
+  .btn-convert:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,212,170,0.5); }
+  .btn-convert:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .result-section { max-width: 900px; margin: 30px auto 0; display: none; }
+  .result-section.show { display: block; }
+  .result-box { background: #162a22; border: 1px solid #00d4aa; border-radius: 16px; padding: 25px; text-align: center; margin-bottom: 20px; }
+  .result-box h3 { color: #00d4aa; font-size: 1.2rem; font-weight: 700; margin-bottom: 8px; }
+  .result-box p { color: #7a9a8a; font-size: 0.9rem; margin-bottom: 20px; }
+  .stats { display: flex; justify-content: center; gap: 25px; margin-bottom: 20px; flex-wrap: wrap; }
+  .stat .num { font-size: 2rem; font-weight: 900; color: #00d4aa; }
+  .stat .label { font-size: 0.75rem; color: #5a7a99; }
+  .btn-download { background: #00d4aa; color: #0f1923; border: none; border-radius: 10px; padding: 12px 35px; font-family: 'Inter', sans-serif; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.3s; }
+  .btn-download:hover { background: #00ffcc; }
+  .error-box { background: #2a1616; border: 1px solid #ff4444; border-radius: 12px; padding: 15px 20px; color: #ff8888; font-size: 0.9rem; max-width: 800px; margin: 20px auto 0; display: none; text-align: center; }
+  .error-box.show { display: block; }
+  .report-card { border-radius: 12px; padding: 20px; margin-bottom: 16px; display: none; }
+  .report-card.show { display: block; }
+  .report-card.orange { background: #1e1a0e; border: 1px solid #ff8800; }
+  .report-card.red    { background: #1e0e0e; border: 1px solid #ff4444; }
+  .report-card.blue   { background: #0e1420; border: 1px solid #0099ff; }
+  .report-card.green  { background: #0e1e14; border: 1px solid #00d4aa; }
+  .report-card h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 12px; }
+  .report-card.orange h4 { color: #ffaa00; }
+  .report-card.red    h4 { color: #ff6666; }
+  .report-card.blue   h4 { color: #44aaff; }
+  .report-card.green  h4 { color: #00d4aa; }
+  .report-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  .report-table th { padding: 7px 10px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.1); font-weight: 600; color: #aab; }
+  .report-table td { padding: 6px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #ccd; }
+  .report-table tr:last-child td { border-bottom: none; }
+  .badge { border-radius: 5px; padding: 2px 8px; font-size: 0.72rem; font-weight: 700; }
+  .badge-warn  { background: #ff6b35; color: #fff; }
+  .badge-fix   { background: #00d4aa; color: #0f1923; }
+  .badge-miss  { background: #cc4444; color: #fff; }
+  .badge-extra { background: #0077cc; color: #fff; }
+</style>
+</head>
+<body>
+<!-- Password Screen -->
+<!-- Main App (hidden until password correct) -->
+<div id="mainApp">
+<div class="header" style="position:relative">
+  <button onclick="doLogout()" style="position:absolute;top:0;left:0;background:transparent;border:1px solid #2d3f55;color:#7a8a99;border-radius:8px;padding:7px 14px;font-size:0.82rem;cursor:pointer;font-family:Inter,sans-serif;">🚪 تسجيل خروج</button>
+  <h1>Warehouse <span>Putaway</span> Tool</h1>
+  <p>Upload the Transfer sheet and Location sheet — get the final output instantly</p>
+</div>
+
+<div class="upload-grid">
+  <div class="upload-box" id="box1">
+    <input type="file" id="file1" accept=".xlsx,.xls">
+    <div class="upload-icon">📥</div>
+    <h3>Transfer Sheet</h3>
+    <p>Stock Picking / Receipts</p>
+    <div class="status" id="status1"></div>
+  </div>
+  <div class="upload-box" id="box2">
+    <input type="file" id="file2" accept=".xlsx,.xls,.csv">
+    <div class="upload-icon">📦</div>
+    <h3>Location Sheet</h3>
+    <p>ID / Location / Quantity</p>
+    <div class="status" id="status2"></div>
+  </div>
+</div>
+
+<button class="btn-convert" id="btnConvert" disabled="" onclick="processFiles()">⚡ Generate Output</button>
+<div class="error-box" id="errorBox"></div>
+
+<div class="result-section" id="resultSection">
+
+  <div class="result-box">
+    <h3>✅ File Ready!</h3>
+    <p id="resultDesc"></p>
+    <div class="stats">
+      <div class="stat"><div class="num" id="sTotal">0</div><div class="label">Total Rows</div></div>
+      <div class="stat"><div class="num" id="sOk">0</div><div class="label">✅ Matched</div></div>
+      <div class="stat"><div class="num" id="sAdj">0</div><div class="label">⚠️ Adjusted</div></div>
+      <div class="stat"><div class="num" id="sFix">0</div><div class="label">🔧 Location Fixed</div></div>
+      <div class="stat"><div class="num" id="sMiss">0</div><div class="label">❌ No Location</div></div>
+    </div>
+    <button class="btn-download" onclick="downloadResult()">⬇️ Download Output</button>
+    <button class="btn-download" style="background:#0099ff;margin-top:10px" onclick="downloadReport()">📊 Download Report</button>
+  </div>
+
+  <!-- Missing in location sheet -->
+  <div class="report-card red" id="cardMissing">
+    <h4>❌ In Transfer — NOT in Location Sheet</h4>
+    <table class="report-table">
+      <thead><tr><th>Product ID</th><th>Product Name</th><th>Qty</th><th>Status</th></tr></thead>
+      <tbody id="bodyMissing"></tbody>
+    </table>
+  </div>
+
+  <!-- Extra in location sheet -->
+  <div class="report-card blue" id="cardExtra">
+    <h4>🔵 In Location Sheet — NOT in Transfer</h4>
+    <table class="report-table">
+      <thead><tr><th>Product ID</th><th>Product Name</th><th>Location</th><th>Status</th></tr></thead>
+      <tbody id="bodyExtra"></tbody>
+    </table>
+  </div>
+
+  <!-- Location fixes -->
+  <div class="report-card green" id="cardFixed">
+    <h4>🔧 Auto-Fixed Locations (KAT prefix)</h4>
+    <table class="report-table">
+      <thead><tr><th>Product ID</th><th>Original</th><th>Fixed To</th></tr></thead>
+      <tbody id="bodyFixed"></tbody>
+    </table>
+  </div>
+
+  <!-- Qty adjustments -->
+  <div class="report-card orange" id="cardAdj">
+    <h4>⚠️ Quantity Adjustments</h4>
+    <table class="report-table">
+      <thead><tr><th>Product ID</th><th>Location Qty</th><th>Transfer Qty</th><th>Status</th></tr></thead>
+      <tbody id="bodyAdj"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+let data1 = null, data2 = null, resultWB = null, reportData = null;
+
+function readFile(file, cb) {
+  const r = new FileReader();
+  r.onload = e => {
+    const wb = XLSX.read(e.target.result, { type: 'array' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    cb(XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' }));
+  };
+  r.readAsArrayBuffer(file);
+}
+
+document.getElementById('file1').addEventListener('change', function() {
+  if (!this.files[0]) return;
+  readFile(this.files[0], json => { data1 = json; document.getElementById('status1').textContent = '✓ ' + this.files[0].name; document.getElementById('box1').classList.add('loaded'); checkReady(); });
+});
+document.getElementById('file2').addEventListener('change', function() {
+  if (!this.files[0]) return;
+  readFile(this.files[0], json => { data2 = json; document.getElementById('status2').textContent = '✓ ' + this.files[0].name; document.getElementById('box2').classList.add('loaded'); checkReady(); });
+});
+function checkReady() { document.getElementById('btnConvert').disabled = !(data1 && data2); }
+
+function fixLoc(loc) {
+  if (!loc) return loc;
+  const up = loc.toUpperCase();
+  if (up.startsWith('KAT/')) return 'KAT/' + loc.slice(4);
+  if (up.startsWith('KT/')) return 'KAT/' + loc.slice(3);
+  if (/^[aA][tT]\//.test(loc)) return 'KAT/' + loc.slice(3);
+  if (/^[tT]\//.test(loc)) return 'KAT/' + loc.slice(2);
+  return loc;
+}
+
+function findSubsetSum(locs, usedSet, target) {
+  const avail = [];
+  for (let i = 0; i < locs.length; i++) {
+    if (!usedSet.has(i) && locs[i].qty !== null) avail.push(i);
+  }
+  for (const i of avail) {
+    if (locs[i].qty === target) return [i];
+  }
+  const n = Math.min(avail.length, 12);
+  for (let mask = 3; mask < (1 << n); mask++) {
+    let sm = 0; const grp = [];
+    for (let b = 0; b < n; b++) {
+      if (mask & (1 << b)) { sm += locs[avail[b]].qty; grp.push(avail[b]); }
+    }
+    if (sm === target) return grp;
+  }
+  if (avail.length > 0) {
+    let best = avail[0];
+    for (const i of avail) {
+      if (Math.abs(locs[i].qty - target) < Math.abs(locs[best].qty - target)) best = i;
+    }
+    return [best];
+  }
+  return null;
+}
+
+function buildLocGroups(locs, lotQtys) {
+  const usedSet = new Set();
+  const result = [];
+  for (const target of lotQtys) {
+    const subset = findSubsetSum(locs, usedSet, target);
+    if (!subset) return null;
+    subset.forEach(i => usedSet.add(i));
+    result.push(subset.map(i => locs[i]));
+  }
+  return result;
+}
+
+
+function matchLocsToLots(locs, lots) {
+  const result = [];
+  const used = new Set();
+  const n = lots.length;
+  const locsWithQty = locs.filter(l => l.qty !== null);
+  const locsNoQty   = locs.filter(l => l.qty === null);
+  const lotQtySet = new Set(lots.map(l => l.qty));
+  locsWithQty.sort((a, b) => (lotQtySet.has(a.qty) ? 0 : 1) - (lotQtySet.has(b.qty) ? 0 : 1));
+  for (const loc of locsWithQty) {
+    const avail = [];
+    for (let i = 0; i < n; i++) { if (!used.has(i)) avail.push(i); }
+    let matched = false;
+    const total = 1 << avail.length;
+    for (let mask = 1; mask < total && !matched; mask++) {
+      let sm = 0; const combo = [];
+      for (let b = 0; b < avail.length; b++) {
+        if (mask & (1 << b)) { sm += lots[avail[b]].qty; combo.push(avail[b]); }
+      }
+      if (sm === loc.qty) {
+        for (const i of combo) { result.push({ lot: lots[i].lot, qty: lots[i].qty, loc: loc.loc }); used.add(i); }
+        matched = true;
+      }
+    }
+    if (!matched && avail.length > 0) {
+      let best = avail[0];
+      for (const i of avail) { if (Math.abs(lots[i].qty - loc.qty) < Math.abs(lots[best].qty - loc.qty)) best = i; }
+      result.push({ lot: lots[best].lot, qty: lots[best].qty, loc: loc.loc });
+      used.add(best);
+    }
+  }
+  const remaining = [];
+  for (let i = 0; i < n; i++) { if (!used.has(i)) remaining.push(i); }
+  remaining.forEach((i, idx) => {
+    const fallback = locsNoQty[idx] ? locsNoQty[idx].loc : (locsNoQty.length > 0 ? locsNoQty[locsNoQty.length-1].loc : locs[locs.length-1].loc);
+    result.push({ lot: lots[i].lot, qty: lots[i].qty, loc: fallback });
+  });
+  return result;
+}
+
+function matchLotsToLocs(lots, locs) {
+  const result = [];
+  const used = new Set();
+  const n = locs.length;
+  const locsNoneIdx = [];
+  const locsWithIdx = [];
+  for (let i = 0; i < n; i++) { (locs[i].qty === null ? locsNoneIdx : locsWithIdx).push(i); }
+  for (const lot of lots) {
+    const avail = locsWithIdx.filter(i => !used.has(i));
+    let matched = false;
+    // Try exact subset sum
+    const total = 1 << avail.length;
+    for (let mask = 1; mask < total && !matched; mask++) {
+      let sm = 0; const combo = [];
+      for (let b = 0; b < avail.length; b++) {
+        if (mask & (1 << b)) { sm += locs[avail[b]].qty; combo.push(avail[b]); }
+      }
+      if (sm === lot.qty) {
+        // exact match → use location qtys
+        for (const i of combo) { result.push({ lot: lot.lot, qty: locs[i].qty, loc: locs[i].loc }); used.add(i); }
+        matched = true;
+      }
+    }
+    if (!matched) {
+      // No exact match → keep lot qty from transfer, assign best location
+      const availNone = locsNoneIdx.filter(i => !used.has(i));
+      const availAll  = [...Array(n).keys()].filter(i => !used.has(i));
+      const pick = availNone.length > 0 ? availNone[0] : (availAll.length > 0 ? availAll[0] : null);
+      if (pick !== null) {
+        // Use transfer qty (lot.qty), not location qty
+        result.push({ lot: lot.lot, qty: lot.qty, loc: locs[pick].loc });
+        used.add(pick);
+      }
+    }
+  }
+  return result;
+}
+
+
+function processFiles() {
+  document.getElementById('errorBox').classList.remove('show');
+  document.getElementById('resultSection').classList.remove('show');
+  ['cardMissing','cardExtra','cardFixed','cardAdj'].forEach(id => document.getElementById(id).classList.remove('show'));
+
+  try {
+    // ── 1. Parse Transfer Sheet ──
+    const hdr = data1[0].map(c => String(c).trim().toLowerCase());
+    const iCode = hdr.findIndex(h => h.includes('reference code'));
+    const iLot  = hdr.findIndex(h => h.includes('lot/serial number'));
+    const iQty  = hdr.findIndex(h => h.includes('qty done'));
+    const iProd = hdr.findIndex(h => h.includes('/product') && !h.includes('code') && !h.includes('category') && !h.includes('reference'));
+
+    if (iCode < 0 || iQty < 0) { showError('Cannot find "Reference Code" or "Qty Done" columns in Transfer sheet'); return; }
+
+    let orderId = '';
+    for (let i = 0; i < data1.length && !orderId; i++)
+      for (let j = 0; j < data1[i].length && !orderId; j++)
+        if (String(data1[i][j]).includes('__export__')) orderId = String(data1[i][j]);
+
+    const transfer = [];
+    for (let i = 1; i < data1.length; i++) {
+      const row  = data1[i];
+      const code = String(row[iCode] || '').trim();
+      if (!code || isNaN(parseFloat(code))) continue;
+      const qty = row[iQty];
+      if (qty === '' || qty === null || isNaN(parseFloat(qty))) continue;
+      transfer.push({
+        code:    String(parseInt(parseFloat(code))),
+        lot:     String(row[iLot]  || '').trim(),
+        qty:     parseInt(parseFloat(qty)),
+        product: iProd >= 0 ? String(row[iProd] || '').replace(/^\[.*?\]\s*/, '') : '',
+      });
+    }
+    if (!transfer.length) { showError('No valid data found in Transfer sheet'); return; }
+
+    // ── 2. Parse Location Sheet ──
+    const lHdr  = data2[0].map(c => String(c).trim().toLowerCase());
+    const iLID  = lHdr.findIndex(h => h === 'id');
+    const iLLoc = lHdr.findIndex(h => h.includes('location'));
+    const iLQty = lHdr.findIndex(h => h.includes('quantity') || (h.includes('qty') && !h.includes('done')));
+    const iLName= lHdr.findIndex(h => h.includes('name') || (h.includes('product') && !h.includes('id')));
+
+    if (iLID < 0 || iLLoc < 0) { showError('Cannot find "ID" and "Location" columns in Location sheet'); return; }
+
+    const locMap = {};
+    const fixedLocs = [];
+    const seenKeys = new Set();
+
+    for (let i = 1; i < data2.length; i++) {
+      const row = data2[i];
+      const id  = String(row[iLID]  || '').trim().replace(/\.0$/, '');
+      let   loc = String(row[iLLoc] || '').trim();
+      if (!id || !loc || id.toLowerCase() === 'nan' || loc.toLowerCase() === 'nan') continue;
+      const fixed = fixLoc(loc);
+      if (fixed !== loc) { fixedLocs.push({ id, orig: loc, fixed }); loc = fixed; }
+      const qRaw = iLQty >= 0 ? row[iLQty] : '';
+      const qty  = (qRaw !== '' && qRaw !== null && !isNaN(parseFloat(qRaw))) ? parseInt(parseFloat(qRaw)) : null;
+      const name = iLName >= 0 ? String(row[iLName] || '') : '';
+      const dk = id + '|||' + loc + '|||' + qty;
+      if (seenKeys.has(dk)) continue;
+      seenKeys.add(dk);
+      if (!locMap[id]) locMap[id] = [];
+      locMap[id].push({ loc, qty, name });
+    }
+
+    // ── 3. Match ──
+    const countByCode = {};
+    const transferByCode = {};
+    for (const t of transfer) {
+      countByCode[t.code] = (countByCode[t.code] || 0) + 1;
+      if (!transferByCode[t.code]) transferByCode[t.code] = [];
+      transferByCode[t.code].push(t);
+    }
+
+    const finalRows  = [];
+    const adjRows    = [];
+    const missingRows = []; // in transfer, not in location
+    let cntOk = 0, cntAdj = 0, cntMiss = 0;
+    const locStateMap = {};
+
+    for (const t of transfer) {
+      const allLocs = locMap[t.code] || [];
+
+      if (allLocs.length === 0) {
+        finalRows.push({ ID: orderId, code: t.code, loc: '', qty: t.qty, lot: t.lot });
+        cntMiss++;
+        if (!missingRows.find(r => r.code === t.code))
+          missingRows.push({ code: t.code, name: t.product, qty: t.qty });
+        continue;
+      }
+
+      if (allLocs.length === 1) {
+        finalRows.push({ ID: orderId, code: t.code, loc: allLocs[0].loc, qty: t.qty, lot: t.lot });
+        cntOk++;
+        continue;
+      }
+
+      const numLots = countByCode[t.code] || 1;
+      const hasQty  = allLocs.some(l => l.qty !== null);
+
+      if (numLots === 1) {
+        if (!hasQty) {
+          const n = allLocs.length, each = Math.floor(t.qty / n), rem = t.qty % n;
+          allLocs.forEach((l, idx) => finalRows.push({ ID: orderId, code: t.code, loc: l.loc, qty: each + (idx === 0 ? rem : 0), lot: t.lot }));
+          cntOk++;
+        } else {
+          const locTotal = allLocs.reduce((s, l) => s + (l.qty || 0), 0);
+          if (locTotal === t.qty) {
+            allLocs.forEach(l => finalRows.push({ ID: orderId, code: t.code, loc: l.loc, qty: l.qty, lot: t.lot }));
+            cntOk++;
+          } else {
+            let remaining = t.qty;
+            allLocs.forEach((l, idx) => {
+              const q = idx === allLocs.length - 1 ? remaining : Math.floor(t.qty * (l.qty || 1) / (locTotal || allLocs.length));
+              if (idx < allLocs.length - 1) remaining -= q;
+              finalRows.push({ ID: orderId, code: t.code, loc: l.loc, qty: q, lot: t.lot });
+            });
+            cntAdj++;
+            adjRows.push({ code: t.code, locQty: locTotal, transferQty: t.qty });
+          }
+        }
+        continue;
+      }
+
+      if (!locStateMap[t.code]) {
+        const lots          = transferByCode[t.code];
+        const transferTotal = lots.reduce((s, l) => s + l.qty, 0);
+        const locTotal      = allLocs.reduce((s, l) => s + (l.qty || 0), 0);
+        if (hasQty && locTotal === transferTotal) {
+          const assigned = lots.length <= allLocs.length ? matchLotsToLocs(lots, allLocs) : matchLocsToLots(allLocs, lots);
+          locStateMap[t.code] = { type: 'greedy', assigned };
+        } else if (hasQty && locTotal !== transferTotal) {
+          const assigned = lots.length <= allLocs.length ? matchLotsToLocs(lots, allLocs) : matchLocsToLots(allLocs, lots);
+          locStateMap[t.code] = { type: 'greedy', assigned, adjusted: true, locTotal, transferTotal };
+        } else {
+          const groups = hasQty ? buildLocGroups(allLocs, lots.map(l => l.qty)) : null;
+          locStateMap[t.code] = { type: 'groups', groups, idx: 0, used: new Set() };
+        }
+      }
+
+      const state = locStateMap[t.code];
+      if (state.type === 'greedy') {
+        const myRows = state.assigned.filter(a => a.lot === t.lot && !a._done);
+        myRows.forEach(a => { a._done = true; finalRows.push({ ID: orderId, code: t.code, loc: a.loc, qty: a.qty, lot: a.lot }); });
+        if (myRows.length === 0) finalRows.push({ ID: orderId, code: t.code, loc: allLocs[0].loc, qty: t.qty, lot: t.lot });
+        if (state.adjusted && !state._adjLogged) {
+          state._adjLogged = true; cntAdj++;
+          adjRows.push({ code: t.code, locQty: state.locTotal, transferQty: state.transferTotal });
+        }
+        cntOk++;
+      } else if (state.groups) {
+        const gi    = state.idx++;
+        const group = gi < state.groups.length ? state.groups[gi] : [allLocs[0]];
+        if (group.length === 1) { finalRows.push({ ID: orderId, code: t.code, loc: group[0].loc, qty: t.qty, lot: t.lot }); }
+        else { group.forEach(l => finalRows.push({ ID: orderId, code: t.code, loc: l.loc, qty: l.qty, lot: t.lot })); }
+        cntOk++;
+      } else {
+        const used  = state.used;
+        const avail = allLocs.map((l, i) => ({...l, i})).filter(l => !used.has(l.i));
+        const pool  = avail.length > 0 ? avail : allLocs.map((l, i) => ({...l, i}));
+        const pick  = pool[0]; used.add(pick.i);
+        finalRows.push({ ID: orderId, code: t.code, loc: pick.loc, qty: t.qty, lot: t.lot });
+        cntOk++;
+      }
+    }
+
+    // ── 4. Extra in location not in transfer ──
+    const transferCodes = new Set(transfer.map(t => t.code));
+    const extraRows = [];
+    for (const [id, locs] of Object.entries(locMap)) {
+      if (!transferCodes.has(id)) {
+        locs.forEach(l => extraRows.push({ code: id, name: l.name || '', loc: l.loc }));
+      }
+    }
+
+    // ── Build reportData for Excel report ──
+    const transferCodes2 = new Set(transfer.map(t => t.code));
+    const uniqueLocsInOutput = new Set(finalRows.filter(r => r.loc).map(r => r.loc));
+    const uniqueProductsInOutput = new Set(finalRows.map(r => r.code));
+
+    // Missing: group by code
+    const missingMap = {};
+    transfer.forEach(t => {
+      if (!locMap[t.code]) {
+        if (!missingMap[t.code]) missingMap[t.code] = { code: t.code, name: t.product, qty: 0, lots: 0 };
+        missingMap[t.code].qty  += t.qty;
+        missingMap[t.code].lots += 1;
+      }
+    });
+
+    reportData = {
+      summary: {
+        totalRows:        finalRows.length,
+        uniqueProducts:   uniqueProductsInOutput.size,
+        uniqueLocations:  uniqueLocsInOutput.size,
+        matched:          cntOk,
+        adjusted:         cntAdj,
+        fixed:            fixedLocs.length,
+        missing:          cntMiss,
+        extra:            extraRows.length,
+      },
+      missing:      Object.values(missingMap),
+      extra:        extraRows,
+      fixed:        fixedLocs,
+      adjustments:  adjRows,
+    };
+
+    // Sort
+    const transferOrder = {};
+    transfer.forEach((t, i) => { const k = t.code+'|||'+t.lot; if (!(k in transferOrder)) transferOrder[k] = i; });
+    finalRows.sort((a, b) => (transferOrder[a.code+'|||'+a.lot]||0) - (transferOrder[b.code+'|||'+b.lot]||0));
+
+    // ── 5. Build Excel ──
+    const outputRows = finalRows.map(r => ({
+      'ID': r.ID, 'Operations / product': r.code,
+      'Operations / unit of Measure': 'Units', 'Operations / From': 'KAT/Input',
+      'Operations / To': r.loc, 'Operations / Done': r.qty, 'Lot/Serial Number': r.lot,
+    }));
+    const wsOut = XLSX.utils.json_to_sheet(outputRows, {
+      header: ['ID','Operations / product','Operations / unit of Measure','Operations / From','Operations / To','Operations / Done','Lot/Serial Number']
+    });
+    wsOut['!cols'] = [{wch:45},{wch:18},{wch:22},{wch:12},{wch:42},{wch:12},{wch:35}];
+    resultWB = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(resultWB, wsOut, 'Sheet1');
+
+    // ── 6. Show results ──
+    document.getElementById('sTotal').textContent = finalRows.length;
+    document.getElementById('sOk').textContent    = cntOk;
+    document.getElementById('sAdj').textContent   = cntAdj;
+    document.getElementById('sFix').textContent   = fixedLocs.length;
+    document.getElementById('sMiss').textContent  = cntMiss;
+    document.getElementById('resultDesc').textContent = `${transfer.length} products from Transfer → ${finalRows.length} rows in output`;
+    document.getElementById('resultSection').classList.add('show');
+
+    // Missing report
+    if (missingRows.length > 0) {
+      const tbody = document.getElementById('bodyMissing'); tbody.innerHTML = '';
+      missingRows.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${r.code}</td><td style="color:#aaa;font-size:.8rem">${r.name||'—'}</td><td>${r.qty}</td><td><span class="badge badge-miss">No Location</span></td>`;
+        tbody.appendChild(tr);
+      });
+      document.getElementById('cardMissing').classList.add('show');
+    }
+
+    // Extra report
+    if (extraRows.length > 0) {
+      const tbody = document.getElementById('bodyExtra'); tbody.innerHTML = '';
+      extraRows.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${r.code}</td><td style="color:#aaa;font-size:.8rem">${r.name||'—'}</td><td style="font-size:.78rem;color:#88aacc">${r.loc}</td><td><span class="badge badge-extra">Not in Transfer</span></td>`;
+        tbody.appendChild(tr);
+      });
+      document.getElementById('cardExtra').classList.add('show');
+    }
+
+    // Fixed locations report
+    if (fixedLocs.length > 0) {
+      const tbody = document.getElementById('bodyFixed'); tbody.innerHTML = '';
+      fixedLocs.forEach(f => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${f.id}</td><td style="color:#f88;font-size:.8rem">${f.orig}</td><td style="color:#00d4aa;font-size:.8rem">${f.fixed}</td>`;
+        tbody.appendChild(tr);
+      });
+      document.getElementById('cardFixed').classList.add('show');
+    }
+
+    // Adjustments report
+    if (adjRows.length > 0) {
+      const tbody = document.getElementById('bodyAdj'); tbody.innerHTML = '';
+      adjRows.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${r.code}</td><td>${r.locQty}</td><td><strong>${r.transferQty}</strong></td><td><span class="badge badge-warn">Adjusted</span></td>`;
+        tbody.appendChild(tr);
+      });
+      document.getElementById('cardAdj').classList.add('show');
+    }
+
+  } catch(err) {
+    showError('Error: ' + err.message);
+    console.error(err);
+  }
+}
+
+function showError(msg) {
+  document.getElementById('errorBox').textContent = '⚠️ ' + msg;
+  document.getElementById('errorBox').classList.add('show');
+}
+
+function downloadResult() {
+  if (!resultWB) return;
+  const d = new Date();
+  const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  XLSX.writeFile(resultWB, `receipts_${ds}.xlsx`);
+}
+
+function downloadReport() {
+  if (!reportData) return;
+  const d  = new Date();
+  const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const wb = XLSX.utils.book_new();
+
+  // ── Sheet 1: Summary ──
+  const summaryRows = [
+    ['Warehouse Receipts Report', '', ds],
+    [],
+    ['Metric', 'Count'],
+    ['Total Output Rows',         reportData.summary.totalRows],
+    ['Total Unique Products',     reportData.summary.uniqueProducts],
+    ['Total Unique Locations',    reportData.summary.uniqueLocations],
+    ['Matched',                   reportData.summary.matched],
+    ['Adjusted (qty mismatch)',   reportData.summary.adjusted],
+    ['Fixed Locations (KAT)',     reportData.summary.fixed],
+    ['Missing Location',          reportData.summary.missing],
+    ['In Location, Not Transfer', reportData.summary.extra],
+  ];
+  const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+  wsSummary['!cols'] = [{wch:30},{wch:15},{wch:15}];
+  XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+
+  // ── Sheet 2: Missing (in transfer, not in location) ──
+  if (reportData.missing.length > 0) {
+    const rows = [['Product ID', 'Product Name', 'Total Qty', 'No. of Lots']];
+    reportData.missing.forEach(r => rows.push([r.code, r.name, r.qty, r.lots]));
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:15},{wch:45},{wch:12},{wch:12}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Missing Location');
+  }
+
+  // ── Sheet 3: Extra (in location, not in transfer) ──
+  if (reportData.extra.length > 0) {
+    const rows = [['Product ID', 'Product Name', 'Location', 'Location Qty']];
+    reportData.extra.forEach(r => rows.push([r.code, r.name, r.loc, r.qty !== null ? r.qty : '—']));
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:15},{wch:45},{wch:42},{wch:14}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Extra in Location');
+  }
+
+  // ── Sheet 4: Fixed Locations ──
+  if (reportData.fixed.length > 0) {
+    const rows = [['Product ID', 'Original Location', 'Fixed Location']];
+    reportData.fixed.forEach(r => rows.push([r.id, r.orig, r.fixed]));
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:15},{wch:42},{wch:42}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Fixed Locations');
+  }
+
+  // ── Sheet 5: Adjustments ──
+  if (reportData.adjustments.length > 0) {
+    const rows = [['Product ID', 'Location Total Qty', 'Transfer Qty', 'Difference']];
+    reportData.adjustments.forEach(r => rows.push([r.code, r.locQty, r.transferQty, r.transferQty - r.locQty]));
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:15},{wch:18},{wch:15},{wch:12}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Qty Adjustments');
+  }
+
+  XLSX.writeFile(wb, `report_${ds}.xlsx`);
+}
+</script>
+<div style="text-align:center;margin-top:50px;margin-bottom:20px;color:#3a5a75;font-size:0.85rem;font-family:Inter,sans-serif;letter-spacing:1px;">✦ Made by Sherbiny ✦</div>
+</div><!-- end mainApp -->
+
+
+</body></html>
