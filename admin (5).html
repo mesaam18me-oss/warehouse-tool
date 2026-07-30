@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin — Warehouse Tool</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #0f1923; color: #e8edf2; min-height: 100vh; }
+
+    .header { background: #1a2535; border-bottom: 1px solid #2d3f55; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+    .header-title { font-size: 1rem; font-weight: 700; color: #fff; }
+    .header-title span { color: #00d4aa; }
+    .btn-logout { background: none; border: 1px solid #2d3f55; border-radius: 8px; color: #7a8a99; font-size: 0.78rem; padding: 6px 12px; cursor: pointer; font-family: 'Inter', sans-serif; }
+    .btn-logout:hover { border-color: #ff4444; color: #ff4444; }
+
+    .tabs { display: flex; gap: 4px; background: #1a2535; border-bottom: 1px solid #2d3f55; padding: 0 24px; }
+    .tab { padding: 12px 20px; font-size: 0.85rem; font-weight: 600; color: #7a8a99; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; background: none; border-top: none; border-left: none; border-right: none; font-family: 'Inter', sans-serif; }
+    .tab.active { color: #00d4aa; border-bottom-color: #00d4aa; }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .main { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+
+    .card { background: #1a2535; border: 1px solid #2d3f55; border-radius: 16px; padding: 20px; margin-bottom: 20px; }
+    .card-title { font-size: 0.75rem; font-weight: 700; color: #5a7a99; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 16px; }
+
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 0.72rem; font-weight: 600; color: #5a7a99; margin-bottom: 6px; text-transform: uppercase; }
+    .form-group input, .form-group select {
+      width: 100%; padding: 10px 14px; background: #0f1923; border: 1.5px solid #2d3f55;
+      border-radius: 8px; color: #fff; font-size: 0.9rem; font-family: 'Inter', sans-serif; outline: none;
+    }
+    .form-group input:focus, .form-group select:focus { border-color: #00d4aa; }
+    .form-group select option { background: #0f1923; }
+
+    .filters { display: grid; grid-template-columns: 1fr 1fr auto auto; gap: 10px; align-items: end; margin-bottom: 16px; }
+    @media(max-width:640px) { .filters { grid-template-columns: 1fr 1fr; } }
+
+    .btn-primary { padding: 10px 20px; background: linear-gradient(135deg,#00d4aa,#0099ff); color: #0f1923; border: none; border-radius: 8px; font-size: 0.85rem; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif; white-space: nowrap; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-danger { padding: 10px 20px; background: transparent; border: 1px solid #ff4444; color: #ff4444; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; white-space: nowrap; }
+    .btn-danger:hover { background: #ff4444; color: #fff; }
+    .btn-secondary { padding: 10px 20px; background: #2d3f55; border: none; color: #e8edf2; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; }
+
+    /* Upload Zone */
+    .upload-zone { border: 2px dashed #2d3f55; border-radius: 10px; padding: 30px; text-align: center; cursor: pointer; transition: all 0.2s; position: relative; }
+    .upload-zone:hover { border-color: #00d4aa; background: #162030; }
+    .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .upload-zone-icon { font-size: 2rem; margin-bottom: 8px; }
+    .upload-zone-text { font-size: 0.85rem; color: #5a7a99; }
+    .upload-status { margin-top: 10px; font-size: 0.82rem; font-weight: 600; color: #00d4aa; min-height: 18px; }
+
+    /* Stats */
+    .stats-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+    .stat-box { background: #0f1923; border: 1px solid #2d3f55; border-radius: 10px; padding: 14px 18px; flex: 1; min-width: 120px; }
+    .stat-num { font-size: 1.6rem; font-weight: 900; color: #00d4aa; }
+    .stat-label { font-size: 0.72rem; color: #5a7a99; margin-top: 2px; }
+
+    /* Table */
+    .table-wrap { overflow-x: auto; max-height: 420px; overflow-y: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    th { padding: 9px 12px; text-align: left; border-bottom: 2px solid #2d3f55; color: #7a8a99; font-weight: 600; position: sticky; top: 0; background: #1a2535; z-index: 1; white-space: nowrap; }
+    td { padding: 8px 12px; border-bottom: 1px solid #1a2535; color: #ccd; }
+    tr:hover td { background: #1e2d3d; }
+    .badge { border-radius: 5px; padding: 2px 8px; font-size: 0.7rem; font-weight: 700; background: #0d2a22; color: #00d4aa; }
+
+    /* Action row */
+    .action-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .action-row-left { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .empty-state { text-align: center; padding: 40px; color: #3a5a75; font-size: 0.9rem; }
+
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #00d4aa; color: #0f1923; padding: 12px 24px; border-radius: 10px; font-weight: 700; font-size: 0.9rem; transition: transform 0.3s; z-index: 999; }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.error { background: #ff4444; color: #fff; }
+
+    .info-box { background: #0e1a2a; border: 1px solid #1a3a5a; border-radius: 10px; padding: 14px; font-size: 0.82rem; color: #5a7a99; margin-bottom: 16px; }
+    .info-box span { color: #00d4aa; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <span class="header-title">⚙️ Admin <span>Panel</span></span>
+  <button class="btn-logout" onclick="doLogout()">Sign Out</button>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('history')">📋 History</button>
+  <button class="tab" onclick="switchTab('products')">📦 Products</button>
+  <button class="tab" onclick="switchTab('cleanup')">🗑️ Cleanup</button>
+</div>
+
+<!-- ═══════════════ HISTORY TAB ═══════════════ -->
+<div class="tab-content active" id="tab-history">
+  <div class="main">
+    <div class="card">
+      <div class="card-title">🔍 Filter Records</div>
+      <div class="filters">
+        <div class="form-group" style="margin-bottom:0">
+          <label>Date</label>
+          <input type="date" id="filterDate"/>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>Category</label>
+          <select id="filterCat">
+            <option value="">All Categories</option>
+          </select>
+        </div>
+        <button class="btn-primary" onclick="loadHistory()">Search</button>
+        <button class="btn-secondary" onclick="exportExcel()">⬇️ Excel</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="action-row">
+        <div class="stats-row" style="margin-bottom:0;flex:1">
+          <div class="stat-box"><div class="stat-num" id="statTotal">—</div><div class="stat-label">Total Records</div></div>
+          <div class="stat-box"><div class="stat-num" id="statQty">—</div><div class="stat-label">Total Qty</div></div>
+          <div class="stat-box"><div class="stat-num" id="statWorkers">—</div><div class="stat-label">Workers</div></div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Category</th>
+              <th>Worker</th>
+              <th>ID</th>
+              <th>Product</th>
+              <th>Location</th>
+              <th>Qty</th>
+              <th>Cartons</th>
+              <th>Units/C</th>
+              <th>Loose</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody">
+            <tr><td colspan="10" class="empty-state">Select a date and category to view records</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ PRODUCTS TAB ═══════════════ -->
+<div class="tab-content" id="tab-products">
+  <div class="main">
+    <div class="card">
+      <div class="card-title">📤 Upload Products Database</div>
+      <div class="info-box">Upload an Excel file with columns: <span>Barcode · Internal Reference · Name · Financial Category</span></div>
+      <div class="upload-zone">
+        <input type="file" id="productsFile" accept=".xlsx,.xls" onchange="uploadProducts(this)"/>
+        <div class="upload-zone-icon">📤</div>
+        <div class="upload-zone-text">Click or drop Excel file here</div>
+        <div class="upload-status" id="uploadStatus"></div>
+      </div>
+    </div>
+
+    <div class="card" id="productsCard" style="display:none">
+      <div class="action-row">
+        <span style="font-size:0.82rem;color:#5a7a99" id="productsCount"></span>
+        <button class="btn-danger" onclick="clearProducts()">🗑 Clear All Products</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Barcode</th><th>ID</th><th>Name</th><th>Category</th></tr></thead>
+          <tbody id="productsBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ CLEANUP TAB ═══════════════ -->
+<div class="tab-content" id="tab-cleanup">
+  <div class="main">
+    <div class="card">
+      <div class="card-title">🗑️ Manual Cleanup</div>
+      <div class="info-box">Select a date and category to delete records. <span>This cannot be undone.</span></div>
+      <div class="filters">
+        <div class="form-group" style="margin-bottom:0">
+          <label>Date</label>
+          <input type="date" id="cleanDate"/>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>Category</label>
+          <select id="cleanCat">
+            <option value="">All Categories</option>
+          </select>
+        </div>
+        <button class="btn-danger" onclick="manualClean()">🗑 Delete Records</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">⏱️ Auto-Cleanup (45 Days)</div>
+      <div class="info-box">Records older than <span>45 days</span> will be automatically deleted when you click the button below.</div>
+      <button class="btn-danger" onclick="autoClean()">🧹 Run Auto-Cleanup Now</button>
+      <div style="margin-top:12px;font-size:0.8rem;color:#5a7a99" id="cleanupStatus"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyB_Z5mz_piSipTtivV0ChIJxzuDd7C0OJw",
+  authDomain: "warehouse-tool-559c0.firebaseapp.com",
+  projectId: "warehouse-tool-559c0",
+  storageBucket: "warehouse-tool-559c0.firebasestorage.app",
+  messagingSenderId: "522041647199",
+  appId: "1:522041647199:web:cf02ca42d76b8821887bea"
+};
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+const CATEGORIES = [
+  "All / Consumables / Cons - Cleaning","All / Consumables / Cons - Misc","Beauty","Beauty Bag",
+  "BFC - Beans","BFC - Capsules","BFC Mood Blends","Branding","Bundles","Cartons",
+  "Chocolates Warehouse","Coffee & Other Drinks","Commodities","Computers","Electronics",
+  "Food","Food Cupboard","Food Cupboard 2","Frozen","Furniture and Fixtures","Home Care",
+  "In-App Gifting Packaging","Indirect Services","Juice","Lips","Milk","Nonfood","Packaging",
+  "Packaging / PK - 407 - Paper","Packaging / PK - 407 - Plastic","Packaging / PK - PL",
+  "Packaging / PK - PL - Plastic","Perfumes","Personal Care","Personal Care 2","Pet Care",
+  "Promo - Non Food","Skin Care","Snacks","Soda","Stationary","Stationary & Games","Tests",
+  "Tissues","Units","Vitamins & Supplements","Water","Child"
+];
+
+let currentRows = [];
+
+onAuthStateChanged(auth, user => {
+  if (!user) { window.location.href = 'login.html'; return; }
+  populateCatSelects();
+  setDefaultDate();
+  loadProducts();
+});
+
+window.doLogout = () => signOut(auth).then(() => window.location.href = 'login.html');
+
+// ── Tabs ──
+window.switchTab = function(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+};
+
+function populateCatSelects() {
+  ['filterCat','cleanCat'].forEach(id => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '<option value="">All Categories</option>';
+    CATEGORIES.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c; opt.textContent = c;
+      sel.appendChild(opt);
+    });
+  });
+}
+
+function setDefaultDate() {
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('filterDate').value = today;
+  document.getElementById('cleanDate').value  = today;
+}
+
+// ── History ──
+window.loadHistory = async function() {
+  const date = document.getElementById('filterDate').value;
+  const cat  = document.getElementById('filterCat').value;
+  if (!date) { showToast('Select a date', true); return; }
+
+  const body = document.getElementById('historyBody');
+  body.innerHTML = '<tr><td colspan="10" class="empty-state">Loading...</td></tr>';
+  currentRows = [];
+
+  // Build collection keys to query
+  let keys = [];
+  if (cat) {
+    const catKey = cat.replace(/\//g,'_').replace(/\s+/g,'_');
+    keys = [date + '_' + catKey];
+  } else {
+    // All categories for that date
+    keys = CATEGORIES.map(c => date + '_' + c.replace(/\//g,'_').replace(/\s+/g,'_'));
+  }
+
+  for (const key of keys) {
+    try {
+      const snap = await getDocs(collection(db, 'putaway', key, 'records'));
+      snap.forEach(d => currentRows.push(d.data()));
+    } catch(e) {}
+  }
+
+  if (currentRows.length === 0) {
+    body.innerHTML = '<tr><td colspan="10" class="empty-state">No records found</td></tr>';
+    document.getElementById('statTotal').textContent   = 0;
+    document.getElementById('statQty').textContent     = 0;
+    document.getElementById('statWorkers').textContent = 0;
+    return;
+  }
+
+  // Stats
+  const totalQty = currentRows.reduce((s,r) => s + (r.qty||0), 0);
+  const workers  = new Set(currentRows.map(r => r.worker)).size;
+  document.getElementById('statTotal').textContent   = currentRows.length;
+  document.getElementById('statQty').textContent     = totalQty.toLocaleString();
+  document.getElementById('statWorkers').textContent = workers;
+
+  body.innerHTML = currentRows.map(r => `
+    <tr>
+      <td>${r.date||'—'}</td>
+      <td><span class="badge">${(r.category||'').substring(0,20)}</span></td>
+      <td>${r.worker||'—'}</td>
+      <td>${r.id||'—'}</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.name||'—'}</td>
+      <td style="font-size:0.72rem">${r.location||'—'}</td>
+      <td style="color:#00d4aa;font-weight:700">${r.qty||0}</td>
+      <td>${r.cartons||0}</td>
+      <td>${r.strength||0}</td>
+      <td>${r.loose||0}</td>
+    </tr>
+  `).join('');
+};
+
+// ── Export Excel ──
+window.exportExcel = function() {
+  if (currentRows.length === 0) { showToast('Load records first', true); return; }
+  const rows = currentRows.map(r => ({
+    'Date': r.date, 'Category': r.category, 'Worker': r.worker,
+    'ID': r.id, 'Product': r.name, 'Location': r.location,
+    'Qty': r.qty, 'Cartons': r.cartons, 'Units/Carton': r.strength, 'Loose': r.loose
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [{wch:12},{wch:30},{wch:15},{wch:12},{wch:35},{wch:35},{wch:8},{wch:8},{wch:10},{wch:8}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Putaway');
+  const d = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `putaway_${d}.xlsx`);
+};
+
+// ── Products ──
+async function loadProducts() {
+  const snap = await getDocs(collection(db, 'products'));
+  const prods = [];
+  snap.forEach(d => prods.push(d.data()));
+  if (prods.length > 0) renderProductsTable(prods);
+}
+
+window.uploadProducts = async function(input) {
+  const file = input.files[0]; if (!file) return;
+  const status = document.getElementById('uploadStatus');
+  status.textContent = 'Reading file...';
+  const reader = new FileReader();
+  reader.onload = async e => {
+    const wb   = XLSX.read(e.target.result, { type: 'array' });
+    const ws   = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+    status.textContent = `Uploading ${rows.length} products...`;
+
+    // Clear existing first
+    const existing = await getDocs(collection(db, 'products'));
+    const delBatch = writeBatch(db);
+    existing.forEach(d => delBatch.delete(d.ref));
+    await delBatch.commit();
+
+    // Parse rows
+    const parsed = [];
+    rows.forEach(row => {
+      const barcode  = String(row['Barcode'] || row['barcode'] || '').trim();
+      const id       = String(row['Internal Reference'] || row['ID'] || '').trim();
+      const name     = String(row['Name'] || row['name'] || '').trim();
+      const category = String(row['Financial Category'] || row['Category'] || '').trim();
+      if (!barcode && !id) return;
+      parsed.push({ barcode, id, name, category });
+    });
+
+    // Upload in chunks of 100 with progress
+    const chunkSize = 100;
+    let uploaded = 0;
+    for (let i = 0; i < parsed.length; i += chunkSize) {
+      const chunk = parsed.slice(i, i + chunkSize);
+      const batch = writeBatch(db);
+      chunk.forEach(p => batch.set(doc(collection(db, 'products')), p));
+      await batch.commit();
+      uploaded += chunk.length;
+      status.textContent = `Uploading... ${uploaded} / ${parsed.length}`;
+    }
+
+    status.textContent = `✅ ${parsed.length} products uploaded successfully`;
+    showToast('Products uploaded!');
+    loadProducts();
+  };
+  reader.readAsArrayBuffer(file);
+};
+
+function renderProductsTable(prods) {
+  document.getElementById('productsCard').style.display = 'block';
+  document.getElementById('productsCount').textContent  = `${prods.length} products in database`;
+  const body = document.getElementById('productsBody');
+  const show = prods.slice(0, 200);
+  body.innerHTML = show.map(p => `
+    <tr><td>${p.barcode}</td><td>${p.id}</td>
+    <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.name}</td>
+    <td>${p.category}</td></tr>
+  `).join('');
+  if (prods.length > 200) body.innerHTML += `<tr><td colspan="4" style="text-align:center;color:#5a7a99;padding:12px">...and ${prods.length-200} more</td></tr>`;
+}
+
+window.clearProducts = async function() {
+  if (!confirm('Delete ALL products from database?')) return;
+  const snap = await getDocs(collection(db, 'products'));
+  const batch = writeBatch(db);
+  snap.forEach(d => batch.delete(d.ref));
+  await batch.commit();
+  document.getElementById('productsCard').style.display = 'none';
+  showToast('Products cleared');
+};
+
+// ── Manual Cleanup ──
+window.manualClean = async function() {
+  const date = document.getElementById('cleanDate').value;
+  const cat  = document.getElementById('cleanCat').value;
+  if (!date) { showToast('Select a date', true); return; }
+  const label = cat ? `"${cat}" on ${date}` : `all categories on ${date}`;
+  if (!confirm(`Delete all records for ${label}?`)) return;
+
+  let keys = [];
+  if (cat) {
+    keys = [date + '_' + cat.replace(/\//g,'_').replace(/\s+/g,'_')];
+  } else {
+    keys = CATEGORIES.map(c => date + '_' + c.replace(/\//g,'_').replace(/\s+/g,'_'));
+  }
+
+  let deleted = 0;
+  for (const key of keys) {
+    try {
+      const snap = await getDocs(collection(db, 'putaway', key, 'records'));
+      if (snap.empty) continue;
+      const batch = writeBatch(db);
+      snap.forEach(d => { batch.delete(d.ref); deleted++; });
+      await batch.commit();
+    } catch(e) {}
+  }
+  showToast(`Deleted ${deleted} records`);
+};
+
+// ── Auto Cleanup (45 days) ──
+window.autoClean = async function() {
+  if (!confirm('Delete all records older than 45 days?')) return;
+  const status = document.getElementById('cleanupStatus');
+  status.textContent = 'Running...';
+
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 45);
+
+  // List all documents in 'putaway' collection
+  const putawaySnap = await getDocs(collection(db, 'putaway'));
+  let deleted = 0;
+  let checked = 0;
+
+  for (const docSnap of putawaySnap.docs) {
+    // doc ID format: YYYY-MM-DD_CategoryKey
+    const dateStr = docSnap.id.slice(0, 10);
+    const docDate = new Date(dateStr);
+    if (isNaN(docDate)) continue;
+    checked++;
+    if (docDate < cutoff) {
+      const recSnap = await getDocs(collection(db, 'putaway', docSnap.id, 'records'));
+      const batch = writeBatch(db);
+      recSnap.forEach(d => { batch.delete(d.ref); deleted++; });
+      await batch.commit();
+    }
+  }
+
+  status.textContent = `✅ Done — checked ${checked} sessions, deleted ${deleted} records`;
+  showToast(`Cleaned ${deleted} old records`);
+};
+
+// ── Toast ──
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = 'toast' + (isError ? ' error' : '');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+</script>
+</body>
+</html>
