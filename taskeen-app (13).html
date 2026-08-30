@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Putaway App</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #0f1923; color: #e8edf2; min-height: 100vh; }
+
+    .header {
+      background: #1a2535; border-bottom: 1px solid #2d3f55;
+      padding: 14px 20px; display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .header-title { font-size: 1rem; font-weight: 700; color: #fff; }
+    .header-title span { color: #00d4aa; }
+    .btn-logout { background: none; border: 1px solid #2d3f55; border-radius: 8px; color: #7a8a99; font-size: 0.78rem; padding: 6px 12px; cursor: pointer; font-family: 'Inter', sans-serif; }
+    .btn-logout:hover { border-color: #ff4444; color: #ff4444; }
+
+    .main { max-width: 520px; margin: 0 auto; padding: 20px 16px 100px; }
+
+    .card { background: #1a2535; border: 1px solid #2d3f55; border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+    .card-title { font-size: 0.75rem; font-weight: 700; color: #5a7a99; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 14px; }
+
+    /* Setup Screen */
+    .setup-screen { display: block; }
+    .form-screen { display: none; }
+
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 0.72rem; font-weight: 600; color: #5a7a99; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-group input, .form-group select {
+      width: 100%; padding: 11px 14px; background: #0f1923; border: 1.5px solid #2d3f55;
+      border-radius: 8px; color: #fff; font-size: 0.95rem; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s;
+    }
+    .form-group input:focus, .form-group select:focus { border-color: #00d4aa; }
+    .form-group input::placeholder { color: #3a5a75; }
+
+    /* Category Search */
+    .cat-search-wrap { position: relative; margin-bottom: 8px; }
+    .cat-search-wrap input { padding-left: 36px; }
+    .cat-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #5a7a99; font-size: 0.9rem; pointer-events: none; }
+    .cat-list { background: #0f1923; border: 1.5px solid #2d3f55; border-radius: 8px; max-height: 220px; overflow-y: auto; display: none; }
+    .cat-list.show { display: block; }
+    .cat-item { padding: 10px 14px; cursor: pointer; font-size: 0.88rem; border-bottom: 1px solid #1a2535; transition: background 0.15s; }
+    .cat-item:last-child { border-bottom: none; }
+    .cat-item:hover { background: #1a2535; }
+    .cat-item.selected { background: #0d2a22; color: #00d4aa; font-weight: 600; }
+    .cat-selected-display {
+      background: #0d2a22; border: 1px solid #00d4aa; border-radius: 8px;
+      padding: 10px 14px; font-size: 0.88rem; color: #00d4aa; font-weight: 600;
+      display: none; cursor: pointer;
+    }
+    .cat-selected-display.show { display: block; }
+
+    .btn-primary {
+      width: 100%; padding: 14px; background: linear-gradient(135deg, #00d4aa, #0099ff);
+      color: #0f1923; border: none; border-radius: 10px; font-size: 1rem;
+      font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif;
+      transition: all 0.2s; box-shadow: 0 4px 16px rgba(0,212,170,0.3);
+    }
+    .btn-primary:hover { transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    /* Session info bar */
+    .session-info {
+      background: #0d2a22; border: 1px solid #00d4aa; border-radius: 10px;
+      padding: 10px 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .session-info-text { font-size: 0.82rem; color: #00d4aa; font-weight: 600; }
+    .btn-change { background: none; border: 1px solid #2d3f55; border-radius: 6px; color: #7a8a99; font-size: 0.72rem; padding: 4px 10px; cursor: pointer; font-family: 'Inter', sans-serif; }
+    .btn-change:hover { border-color: #00d4aa; color: #00d4aa; }
+
+    /* Scan */
+    .scan-wrap { position: relative; }
+    .scan-wrap input {
+      width: 100%; padding: 13px 44px 13px 16px; background: #0f1923;
+      border: 2px solid #2d3f55; border-radius: 10px; color: #fff;
+      font-size: 1rem; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s;
+    }
+    .scan-wrap input:focus { border-color: #00d4aa; }
+    .scan-wrap input::placeholder { color: #3a5a75; }
+    .scan-icon { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-size: 1.2rem; pointer-events: none; }
+
+    .product-info { background: #0f1923; border: 1px solid #00d4aa; border-radius: 10px; padding: 12px 14px; margin-top: 10px; display: none; }
+    .product-info.show { display: block; }
+    .product-name { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 4px; }
+    .product-id { font-size: 0.75rem; color: #00d4aa; }
+
+    .multi-match { margin-top: 10px; display: none; }
+    .multi-match.show { display: block; }
+    .multi-match-title { font-size: 0.75rem; color: #ffaa00; font-weight: 600; margin-bottom: 8px; }
+    .match-option { background: #0f1923; border: 1px solid #2d3f55; border-radius: 8px; padding: 10px 14px; margin-bottom: 6px; cursor: pointer; transition: border-color 0.2s; }
+    .match-option:hover { border-color: #00d4aa; }
+    .match-option.selected { border-color: #00d4aa; background: #0d2a22; }
+    .match-name { font-size: 0.85rem; font-weight: 600; color: #e8edf2; }
+    .match-id { font-size: 0.72rem; color: #5a7a99; margin-top: 2px; }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .form-group input:read-only { color: #00d4aa; border-color: #1a3a2a; cursor: default; }
+
+    .btn-save {
+      width: 100%; padding: 14px; background: linear-gradient(135deg, #00d4aa, #0099ff);
+      color: #0f1923; border: none; border-radius: 10px; font-size: 1rem;
+      font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif; margin-top: 4px;
+      transition: all 0.2s; box-shadow: 0 4px 16px rgba(0,212,170,0.3);
+    }
+    .btn-save:hover { transform: translateY(-1px); }
+
+    /* Records */
+    .records-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .record-item { background: #0f1923; border: 1px solid #2d3f55; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+    .record-info { flex: 1; min-width: 0; }
+    .record-name { font-size: 0.82rem; font-weight: 600; color: #e8edf2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .record-meta { font-size: 0.72rem; color: #5a7a99; margin-top: 3px; }
+    .record-qty { font-size: 0.85rem; font-weight: 700; color: #00d4aa; white-space: nowrap; }
+    .btn-del { background: none; border: none; color: #3a5a75; cursor: pointer; font-size: 1rem; padding: 2px 6px; }
+    .btn-del:hover { color: #ff4444; }
+    .empty-state { text-align: center; padding: 30px 20px; color: #3a5a75; font-size: 0.85rem; }
+
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #00d4aa; color: #0f1923; padding: 12px 24px; border-radius: 10px; font-weight: 700; font-size: 0.9rem; transition: transform 0.3s; z-index: 999; white-space: nowrap; }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.error { background: #ff4444; color: #fff; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <span class="header-title">📦 Putaway <span>App</span></span>
+  <button class="btn-logout" onclick="doLogout()">Sign Out</button>
+</div>
+
+<div class="main">
+
+  <!-- Setup Screen -->
+  <div class="setup-screen" id="setupScreen">
+    <div class="card">
+      <div class="card-title">🚀 Start Session</div>
+
+      <!-- Category Search -->
+      <div class="form-group">
+        <label>Category</label>
+        <div class="cat-search-wrap">
+          <span class="cat-search-icon">🔍</span>
+          <input type="text" id="catSearch" placeholder="Search category..." autocomplete="off" oninput="filterCats()" onfocus="showCatList()"/>
+        </div>
+        <div class="cat-list" id="catList"></div>
+        <div class="cat-selected-display" id="catSelectedDisplay" onclick="changeCat()"></div>
+      </div>
+
+      <!-- Worker Name -->
+      <div class="form-group">
+        <label>Your Name</label>
+        <input type="text" id="workerName" placeholder="Enter your name..."/>
+      </div>
+
+      <button class="btn-primary" onclick="startSession()">Start →</button>
+    </div>
+  </div>
+
+  <!-- Form Screen -->
+  <div class="form-screen" id="formScreen">
+
+    <!-- Session Info -->
+    <div class="session-info">
+      <div class="session-info-text" id="sessionInfoText"></div>
+      <button class="btn-change" onclick="changeSession()">Change</button>
+    </div>
+
+    <!-- Scan Card -->
+    <div class="card">
+      <div class="card-title">📷 Scan Product</div>
+      <div class="scan-wrap">
+        <input type="text" id="barcodeInput" placeholder="Scan barcode..." autocomplete="off" autofocus/>
+        <span class="scan-icon">📷</span>
+      </div>
+      <div class="multi-match" id="multiMatch">
+        <div class="multi-match-title">⚠️ Multiple products — select one:</div>
+        <div id="matchList"></div>
+      </div>
+      <div class="product-info" id="productInfo">
+        <div class="product-name" id="productName">—</div>
+        <div class="product-id" id="productIdDisplay">ID: —</div>
+      </div>
+
+      <!-- Manual entry if product not found -->
+      <div id="manualEntry" style="display:none;margin-top:10px;background:#1e1a0e;border:1px solid #ff8800;border-radius:10px;padding:12px 14px">
+        <div style="font-size:0.75rem;color:#ffaa00;font-weight:700;margin-bottom:10px">⚠️ Product not found — enter manually</div>
+        <div class="form-group" style="margin-bottom:8px">
+          <label>ID <span style="color:#ff4444">*</span></label>
+          <input type="text" id="manualId" placeholder="Enter product ID..." autocomplete="off"/>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>Name (optional)</label>
+          <input type="text" id="manualName" placeholder="Enter product name..." autocomplete="off"/>
+        </div>
+      </div>
+
+      <input type="hidden" id="selectedId"/>
+      <input type="hidden" id="selectedName"/>
+    </div>
+
+    <!-- Qty Card -->
+    <div class="card">
+      <div class="card-title">📊 Quantity</div>
+      <div class="form-row" style="margin-bottom:10px">
+        <div class="form-group" style="margin-bottom:0">
+          <label>Units/Carton</label>
+          <input type="number" id="strengthInput" placeholder="0" min="0" oninput="calcTotal()"/>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>Cartons</label>
+          <input type="number" id="cartonsInput" placeholder="0" min="0" oninput="calcTotal()"/>
+        </div>
+      </div>
+      <div class="form-row" style="margin-bottom:10px">
+        <div class="form-group" style="margin-bottom:0">
+          <label>Subtotal</label>
+          <input type="number" id="subtotalInput" placeholder="0" readonly/>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>Loose Units</label>
+          <input type="number" id="looseInput" placeholder="0" min="0" oninput="calcTotal()"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Total Qty</label>
+        <input type="number" id="totalInput" placeholder="0" readonly/>
+      </div>
+    </div>
+
+    <!-- Location Card -->
+    <div class="card">
+      <div class="card-title">📍 Location</div>
+      <div class="scan-wrap" style="margin-bottom:0">
+        <input type="text" id="locationInput" placeholder="Scan or type location..." autocomplete="off"/>
+        <span class="scan-icon">📍</span>
+      </div>
+    </div>
+
+    <button class="btn-save" onclick="saveRecord()">➕ Save Record</button>
+
+    <!-- Records -->
+    <div class="card" style="margin-top:16px">
+      <div class="records-header">
+        <div class="card-title" style="margin-bottom:0">📋 Today's Records <span style="color:#5a7a99;font-size:0.8rem" id="recordsCount"></span></div>
+      </div>
+      <div id="recordsList"><div class="empty-state">No records yet</div></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Edit Modal -->
+<div id="editModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#1a2535;border:1px solid #2d3f55;border-radius:16px;padding:24px;width:100%;max-width:420px">
+    <h3 style="color:#fff;font-size:1rem;font-weight:700;margin-bottom:16px">✏️ Edit Record</h3>
+    <input type="hidden" id="editDocId"/>
+    <div class="form-group">
+      <label>Product</label>
+      <input type="text" id="editName" readonly style="color:#00d4aa;border-color:#1a3a2a"/>
+    </div>
+    <div class="form-row" style="margin-bottom:10px">
+      <div class="form-group" style="margin-bottom:0">
+        <label>Units/Carton</label>
+        <input type="number" id="editStrength" min="0" oninput="calcEditTotal()"/>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label>Cartons</label>
+        <input type="number" id="editCartons" min="0" oninput="calcEditTotal()"/>
+      </div>
+    </div>
+    <div class="form-row" style="margin-bottom:10px">
+      <div class="form-group" style="margin-bottom:0">
+        <label>Subtotal</label>
+        <input type="number" id="editSubtotal" readonly/>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label>Loose Units</label>
+        <input type="number" id="editLoose" min="0" oninput="calcEditTotal()"/>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Total Qty</label>
+      <input type="number" id="editTotal" readonly/>
+    </div>
+    <div class="form-group">
+      <label>Location</label>
+      <input type="text" id="editLocation" placeholder="Location..."/>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button onclick="closeEdit()" style="flex:1;padding:12px;background:#2d3f55;border:none;border-radius:8px;color:#e8edf2;font-size:0.9rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif">Cancel</button>
+      <button onclick="saveEdit()" style="flex:1;padding:12px;background:linear-gradient(135deg,#00d4aa,#0099ff);border:none;border-radius:8px;color:#0f1923;font-size:0.9rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyB_Z5mz_piSipTtivV0ChIJxzuDd7C0OJw",
+  authDomain: "warehouse-tool-559c0.firebaseapp.com",
+  projectId: "warehouse-tool-559c0",
+  storageBucket: "warehouse-tool-559c0.firebasestorage.app",
+  messagingSenderId: "522041647199",
+  appId: "1:522041647199:web:cf02ca42d76b8821887bea"
+};
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+const CATEGORIES = [
+  "All / Consumables / Cons - Cleaning","All / Consumables / Cons - Misc","Beauty","Beauty Bag",
+  "BFC - Beans","BFC - Capsules","BFC Mood Blends","Branding","Bundles","Cartons",
+  "Chocolates Warehouse","Coffee & Other Drinks","Commodities","Computers","Electronics",
+  "Food","Food Cupboard","Food Cupboard 2","Frozen","Furniture and Fixtures","Home Care",
+  "In-App Gifting Packaging","Indirect Services","Juice","Lips","Milk","Nonfood","Packaging",
+  "Packaging / PK - 407 - Paper","Packaging / PK - 407 - Plastic","Packaging / PK - PL",
+  "Packaging / PK - PL - Plastic","Perfumes","Personal Care","Personal Care 2","Pet Care",
+  "Promo - Non Food","Skin Care","Snacks","Soda","Stationary","Stationary & Games","Tests",
+  "Tissues","Units","Vitamins & Supplements","Water","Child"
+];
+
+let selectedCat  = null;
+let currentWorker = null;
+let products     = [];
+let records      = [];
+let unsubRecords = null;
+const todayStr   = new Date().toISOString().slice(0,10);
+
+// ── Auth ──
+onAuthStateChanged(auth, async user => {
+  if (!user) { window.location.href = 'login.html'; return; }
+  window._uid = user.uid;
+  try {
+    const userDoc = await getDoc(doc(db, 'users', user.uid));
+    if (userDoc.exists() && userDoc.data().managerId) {
+      window._managerId = userDoc.data().managerId;
+    } else {
+      window._managerId = user.uid;
+    }
+  } catch(e) { window._managerId = user.uid; }
+  loadProducts();
+  renderCatList('');
+});
+
+window.doLogout = () => signOut(auth).then(() => window.location.href = 'login.html');
+
+// ── Category ──
+window.filterCats = function() {
+  const q = document.getElementById('catSearch').value;
+  renderCatList(q);
+};
+
+window.showCatList = function() {
+  if (!selectedCat) document.getElementById('catList').classList.add('show');
+};
+
+function renderCatList(q) {
+  const list = document.getElementById('catList');
+  const filtered = q ? CATEGORIES.filter(c => c.toLowerCase().includes(q.toLowerCase())) : CATEGORIES;
+  list.innerHTML = filtered.map(c => `
+    <div class="cat-item ${selectedCat===c?'selected':''}" onclick="selectCat('${c.replace(/'/g,"\\'")}')">
+      ${c}
+    </div>
+  `).join('');
+  list.classList.add('show');
+}
+
+window.selectCat = function(cat) {
+  selectedCat = cat;
+  document.getElementById('catSearch').value = cat;
+  document.getElementById('catList').classList.remove('show');
+  document.getElementById('catSelectedDisplay').textContent = '✅ ' + cat;
+  document.getElementById('catSelectedDisplay').classList.add('show');
+  document.getElementById('catSearch').style.display = 'none';
+};
+
+window.changeCat = function() {
+  selectedCat = null;
+  document.getElementById('catSearch').value = '';
+  document.getElementById('catSearch').style.display = '';
+  document.getElementById('catSelectedDisplay').classList.remove('show');
+  renderCatList('');
+};
+
+// ── Start Session ──
+window.startSession = function() {
+  const name = document.getElementById('workerName').value.trim();
+  if (!selectedCat) { showToast('Select a category first', true); return; }
+  if (!name)        { showToast('Enter your name', true); return; }
+  currentWorker = name;
+  document.getElementById('setupScreen').style.display = 'none';
+  document.getElementById('formScreen').style.display  = 'block';
+  document.getElementById('sessionInfoText').textContent = `📂 ${selectedCat}  ·  👤 ${name}`;
+  subscribeRecords();
+  document.getElementById('barcodeInput').focus();
+};
+
+window.changeSession = function() {
+  if (unsubRecords) { unsubRecords(); unsubRecords = null; }
+  selectedCat = null; currentWorker = null;
+  document.getElementById('setupScreen').style.display = 'block';
+  document.getElementById('formScreen').style.display  = 'none';
+  document.getElementById('catSearch').value = '';
+  document.getElementById('catSearch').style.display = '';
+  document.getElementById('catSelectedDisplay').classList.remove('show');
+  document.getElementById('workerName').value = '';
+  renderCatList('');
+};
+
+// ── Load Products ──
+async function loadProducts() {
+  products = [];
+  const managerId = window._managerId || 'default';
+  try {
+    // Load from Firebase under manager's account
+    for (let i = 0; i < 10; i++) {
+      const d = await getDoc(doc(db, 'users', managerId, 'products', 'chunk_' + i));
+      if (d.exists() && d.data().items && d.data().items.length > 0) {
+        products.push(...d.data().items);
+      }
+    }
+    // Fallback to products.json if no Firebase products
+    if (products.length === 0) {
+      const res = await fetch('products.json?t=' + Date.now());
+      if (res.ok) products = await res.json();
+    }
+  } catch(e) {
+    try {
+      const res = await fetch('products.json?t=' + Date.now());
+      if (res.ok) products = await res.json();
+    } catch(e2) { products = []; }
+  }
+}
+
+// ── Subscribe Records ──
+function subscribeRecords() {
+  if (!selectedCat || !currentWorker) return;
+  if (unsubRecords) unsubRecords();
+  const managerId = window._managerId || 'default';
+  const catKey = selectedCat.replace(/\//g,'_').replace(/\s+/g,'_');
+  const path = collection(db, 'users', managerId, 'putaway', todayStr + '_' + catKey, 'records');
+  unsubRecords = onSnapshot(path, snap => {
+    records = [];
+    snap.forEach(d => records.push({ _docId: d.id, ...d.data() }));
+    // show only current worker's records
+    renderRecords(records.filter(r => r.worker === currentWorker));
+  });
+}
+
+// ── Barcode ──
+const barcodeInput = document.getElementById('barcodeInput');
+let scanTimer = null;
+window._ignoreScan = false;
+barcodeInput.addEventListener('input', () => {
+  if (window._ignoreScan) { barcodeInput.value = ''; return; }
+  clearTimeout(scanTimer);
+  scanTimer = setTimeout(() => handleBarcode(barcodeInput.value.trim()), 300);
+});
+
+function handleBarcode(val) {
+  if (!val) { hideProductInfo(); return; }
+  const matches = products.filter(p => String(p.barcode)===val || String(p.id)===val);
+  if (matches.length === 0) {
+    hideProductInfo();
+    // Show manual entry
+    document.getElementById('manualEntry').style.display = 'block';
+    document.getElementById('manualId').value = val;
+    document.getElementById('manualId').focus();
+    document.getElementById('selectedId').value   = '';
+    document.getElementById('selectedName').value = '';
+  } else if (matches.length === 1) {
+    selectProduct(matches[0]);
+  } else {
+    showMultiMatch(matches);
+  }
+}
+
+function selectProduct(p) {
+  document.getElementById('selectedId').value   = p.id;
+  document.getElementById('selectedName').value = p.name;
+  document.getElementById('productName').textContent     = p.name;
+  document.getElementById('productIdDisplay').textContent = 'ID: ' + p.id;
+  document.getElementById('productInfo').classList.add('show');
+  document.getElementById('multiMatch').classList.remove('show');
+  document.getElementById('manualEntry').style.display = 'none';
+  document.getElementById('strengthInput').focus();
+}
+
+function showMultiMatch(matches) {
+  document.getElementById('productInfo').classList.remove('show');
+  const list = document.getElementById('matchList');
+  list.innerHTML = '';
+  matches.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'match-option';
+    div.innerHTML = `<div class="match-name">${p.name}</div><div class="match-id">ID: ${p.id}</div>`;
+    div.onclick = () => {
+      document.querySelectorAll('.match-option').forEach(o => o.classList.remove('selected'));
+      div.classList.add('selected');
+      selectProduct(p);
+    };
+    list.appendChild(div);
+  });
+  document.getElementById('multiMatch').classList.add('show');
+}
+
+function hideProductInfo() {
+  document.getElementById('productInfo').classList.remove('show');
+  document.getElementById('multiMatch').classList.remove('show');
+  document.getElementById('manualEntry').style.display = 'none';
+  document.getElementById('manualId').value   = '';
+  document.getElementById('manualName').value = '';
+  document.getElementById('selectedId').value   = '';
+  document.getElementById('selectedName').value = '';
+}
+
+// ── Calc ──
+window.calcTotal = function() {
+  const c = parseInt(document.getElementById('cartonsInput').value)  || 0;
+  const s = parseInt(document.getElementById('strengthInput').value) || 0;
+  const l = parseInt(document.getElementById('looseInput').value)    || 0;
+  const sub = c * s;
+  document.getElementById('subtotalInput').value = sub;
+  document.getElementById('totalInput').value    = sub + l;
+};
+
+// ── Save ──
+window.saveRecord = async function() {
+  // Check if manual entry is being used
+  let id   = document.getElementById('selectedId').value;
+  let name = document.getElementById('selectedName').value;
+  if (!id && document.getElementById('manualEntry').style.display !== 'none') {
+    id   = document.getElementById('manualId').value.trim();
+    name = document.getElementById('manualName').value.trim() || 'Manual Entry';
+  }
+  const qty      = parseInt(document.getElementById('totalInput').value)   || 0;
+  const location = document.getElementById('locationInput').value.trim();
+  const cartons  = parseInt(document.getElementById('cartonsInput').value)  || 0;
+  const strength = parseInt(document.getElementById('strengthInput').value) || 0;
+  const loose    = parseInt(document.getElementById('looseInput').value)    || 0;
+
+  if (!id)       { showToast('Scan a product first', true); return; }
+  if (!qty)      { showToast('Enter quantity', true); return; }
+  if (!location) { showToast('Enter location', true); return; }
+
+  const catKey = selectedCat.replace(/\//g,'_').replace(/\s+/g,'_');
+  const record = {
+    id, name, qty, location, cartons, strength, loose,
+    worker: currentWorker,
+    category: selectedCat,
+    date: todayStr,
+    timestamp: Date.now()
+  };
+
+  const managerId = window._managerId || 'default';
+  const ref = doc(collection(db, 'users', managerId, 'putaway', todayStr + '_' + catKey, 'records'));
+  await setDoc(ref, record);
+  console.log('✅ setDoc done - starting clear');
+  showToast('✅ Saved!');
+
+  // Clear fields
+  const fieldIds = ['barcodeInput','cartonsInput','strengthInput','looseInput',
+                    'subtotalInput','totalInput','locationInput','selectedId','selectedName',
+                    'manualId','manualName'];
+  fieldIds.forEach(fid => { const el = document.getElementById(fid); if(el) el.value = ''; });
+  document.getElementById('productInfo').classList.remove('show');
+  document.getElementById('multiMatch').classList.remove('show');
+  document.getElementById('manualEntry').style.display = 'none';
+  
+  console.log('✅ clear done - barcodeInput now:', document.getElementById('barcodeInput').value);
+  
+  window._ignoreScan = true;
+  console.log('✅ ignoreScan set to true');
+  setTimeout(() => { window._ignoreScan = false; }, 1500);
+  document.getElementById('barcodeInput').focus();
+};
+
+function resetForm() {
+  document.getElementById('barcodeInput').value = '';
+  ['cartonsInput','strengthInput','looseInput','subtotalInput','totalInput','locationInput']
+    .forEach(id => document.getElementById(id).value = '');
+  document.getElementById('productInfo').classList.remove('show');
+  document.getElementById('multiMatch').classList.remove('show');
+  document.getElementById('manualEntry').style.display = 'none';
+  document.getElementById('manualId').value   = '';
+  document.getElementById('manualName').value = '';
+  document.getElementById('selectedId').value   = '';
+  document.getElementById('selectedName').value = '';
+  document.getElementById('barcodeInput').focus();
+}
+
+// ── Delete ──
+window.deleteRecord = async function(docId) {
+  const managerId2 = window._managerId || 'default';
+  const catKey = selectedCat.replace(/\//g,'_').replace(/\s+/g,'_');
+  await deleteDoc(doc(db, 'users', managerId2, 'putaway', todayStr + '_' + catKey, 'records', docId));
+  showToast('Deleted');
+};
+
+// ── Render Records ──
+function renderRecords(recs) {
+  const list  = document.getElementById('recordsList');
+  const count = document.getElementById('recordsCount');
+  if (recs.length === 0) {
+    list.innerHTML = '<div class="empty-state">No records yet — scan a product to start</div>';
+    count.textContent = '';
+    return;
+  }
+  count.textContent = `(${recs.length})`;
+  const sorted = [...recs].sort((a,b) => b.timestamp - a.timestamp);
+  // Store records globally for edit access
+  window._currentRecords = sorted;
+
+  list.innerHTML = sorted.map((r, idx) => `
+    <div class="record-item">
+      <div class="record-info">
+        <div class="record-name">${r.name}</div>
+        <div class="record-meta">ID: ${r.id} · ${r.location}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="record-qty">${r.qty}</span>
+        <button class="btn-del" style="color:#5a7a99;font-size:0.8rem;padding:3px 8px;border:1px solid #2d3f55;border-radius:6px" onclick="openEdit(${idx})">✏️</button>
+        <button class="btn-del" onclick="deleteRecord('${r._docId}')">🗑</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Toast ──
+window.openEdit = function(idx) {
+  const r = window._currentRecords[idx];
+  if (!r) return;
+  document.getElementById('editModal').style.display    = 'flex';
+  document.getElementById('editDocId').value            = r._docId;
+  document.getElementById('editName').value             = r.name || '';
+  document.getElementById('editStrength').value         = r.strength || 0;
+  document.getElementById('editCartons').value          = r.cartons  || 0;
+  document.getElementById('editLoose').value            = r.loose    || 0;
+  document.getElementById('editLocation').value         = r.location || '';
+  calcEditTotal();
+};
+
+window.calcEditTotal = function() {
+  const c = parseInt(document.getElementById('editCartons').value)  || 0;
+  const s = parseInt(document.getElementById('editStrength').value) || 0;
+  const l = parseInt(document.getElementById('editLoose').value)    || 0;
+  const sub = c * s;
+  document.getElementById('editSubtotal').value = sub;
+  document.getElementById('editTotal').value    = sub + l;
+};
+
+window.closeEdit = function() {
+  document.getElementById('editModal').style.display = 'none';
+};
+
+window.saveEdit = async function() {
+  const docId    = document.getElementById('editDocId').value;
+  const location = document.getElementById('editLocation').value.trim();
+  const qty      = parseInt(document.getElementById('editTotal').value)    || 0;
+  const cartons  = parseInt(document.getElementById('editCartons').value)  || 0;
+  const strength = parseInt(document.getElementById('editStrength').value) || 0;
+  const loose    = parseInt(document.getElementById('editLoose').value)    || 0;
+
+  if (!location) { showToast('Enter location', true); return; }
+  if (!qty)      { showToast('Enter quantity', true); return; }
+
+  const managerId3 = window._managerId || 'default';
+  const catKey = selectedCat.replace(/\//g,'_').replace(/\s+/g,'_');
+  const ref = doc(db, 'users', managerId3, 'putaway', todayStr + '_' + catKey, 'records', docId);
+  await setDoc(ref, { qty, location, cartons, strength, loose }, { merge: true });
+
+  document.getElementById('editModal').style.display = 'none';
+  showToast('✅ Updated!');
+};
+
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = 'toast' + (isError ? ' error' : '');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>
